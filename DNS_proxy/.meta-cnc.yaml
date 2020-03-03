@@ -10,13 +10,12 @@ description: provisions NGFW DNS proxy
 # common types are panorama, panos, and template
 # https://github.com/PaloAltoNetworks/panhandler/blob/develop/docs/metadata_configuration.rst
 type: panos
-# preload static or default-based templates
-extends:
 
 # grouping of like snippets for dynamic menu creation in panhandler
 labels:
   collection:
     - NGFW setup
+    - Configure
 
 # ---------------------------------------------------------------------
 # end of preamble section
@@ -28,17 +27,32 @@ labels:
 # type_hints can be text, ip_address, or dropdown
 variables:
   - name: dns_proxy
-    description: proxy name
+    description: DNS proxy name
     default: dns_proxy name
     type_hint: text
-  - name: rule_1
-    description: rule name
-    default: rule_1 name
+  - name: primary_dns
+    description: primary DNS server address
+    default: 1.1.1.1
     type_hint: text
+  - name: secondary_dns
+    description: secondary DNS server address
+    default: 8.8.8.8
+    type_hint: text
+  - name: proxy_interface
+    description: proxy interface name
+    default: ethernet1/1
+    type_hint: text
+    help_text: interface assigned to the dns proxy (eg. ethernet1/1)
+  - name: rule_1
+    description: DNS proxy rule name with a URL mapping
+    default: rule 1
+    type_hint: text
+    help_text: example rule with specific DNS servers associated to domains
   - name: some_url
     description: FQDN name
-    default: some_url
+    default: testdomain.com
     type_hint: text
+    help_text: FQDN entry used in the rule to associate domains to rules
 
 # ---------------------------------------------------------------------
 # end of variables section
@@ -50,8 +64,35 @@ variables:
 snippets:
   - name: dns_proxy
     xpath: /config/devices/entry[@name='localhost.localdomain']/network/dns-proxy
-    file: dns_proxy.xml
-
+    element: |-
+      <entry name="{{ dns_proxy }}">
+        <cache>
+          <max-ttl>
+            <enabled>yes</enabled>
+          </max-ttl>
+          <enabled>yes</enabled>
+        </cache>
+        <default>
+          <primary>{{ primary_dns }}</primary>
+          <secondary>{{ secondary_dns }}</secondary>
+        </default>
+        <tcp-queries>
+          <enabled>yes</enabled>
+        </tcp-queries>
+        <domain-servers>
+          <entry name="{{ rule_1 }}">
+            <domain-name>
+              <member>{{ some_url }}</member>
+            </domain-name>
+            <primary>{{ primary_dns }}</primary>
+            <secondary>{{ secondary_dns }}</secondary>
+            <cacheable>yes</cacheable>
+          </entry>
+        </domain-servers>
+        <interface>
+          <member>{{ proxy_interface }}</member>
+        </interface>
+      </entry>
 
 # ---------------------------------------------------------------------
 # end of snippets section
